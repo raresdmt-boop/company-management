@@ -5,13 +5,15 @@ import unu_la_multi.company_management.CompanyManagement.employee.models.Employe
 public record EmployeeResponse(
         Long id,
         String firstName,
-        String lastName
+        String lastName,
+        String departmentName
 ) {
     public static EmployeeResponse from(Employee employee) {
         return new EmployeeResponse(
                 employee.getId(),
                 employee.getFirstName(),
-                employee.getLastName()
+                employee.getLastName(),
+                employee.getDepartment().getName()
         );
     }
 }

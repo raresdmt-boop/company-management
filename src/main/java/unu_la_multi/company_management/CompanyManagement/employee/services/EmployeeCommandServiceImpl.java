@@ -29,7 +29,7 @@ public class EmployeeCommandServiceImpl implements EmployeeCommandService {
     @Override
     public EmployeeResponse createEmployeeWithDepartment(EmployeeCreateRequest request, Long departmentId) {
 
-        Department department = departmentRepository.findById(departmentId).orElse(null);
+        Department department = departmentRepository.findById(departmentId).orElseThrow();
 
         Employee employee = new Employee(
                 request.firstName(),
@@ -40,17 +40,15 @@ public class EmployeeCommandServiceImpl implements EmployeeCommandService {
                 request.accessCode()
         );
 
-        if (department != null) {
-            department.addEmployee(employee);
-        }
-        else throw new DepartmentIdNotFound();
+        department.addEmployee(employee);
 
         employeeRepository.save(employee);
 
         return new EmployeeResponse(
                 employee.getId(),
                 employee.getFirstName(),
-                employee.getLastName()
+                employee.getLastName(),
+                employee.getDepartment().getName()
         );
     }
 }
