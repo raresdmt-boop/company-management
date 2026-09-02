@@ -1,0 +1,45 @@
+{
+  "info": {
+    "_postman_id": "ca81b643-35dc-4f03-863e-7087623f92ec",
+    "name": "company-management-api",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "48823181",
+    "_collection_link": "https://go.postman.co/collection/48823181-ca81b643-35dc-4f03-863e-7087623f92ec?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "GET all join fetch",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8099/api/company",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8099",
+          "path": [
+            "api",
+            "company"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST create department",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": ""
+        }
+      },
+      "response": []
+    }
+  ]
+}
