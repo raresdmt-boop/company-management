@@ -16,9 +16,6 @@ public record DepartmentCreateRequest(
         String location,
 
         @PositiveOrZero(message = "Department budget cannot be negative")
-        Double budget,
-
-        @Nullable
-        List<EmployeeCreateRequest> employees
+        Double budget
 ) {
 }

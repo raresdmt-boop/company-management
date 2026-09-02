@@ -36,6 +36,7 @@ public class Employee {
     @Getter
     @NotBlank(message = "Employee email required")
     @Column(name = "email", nullable = false,unique = true, length = 50)
+    @Size(min = 1, max = 50)
     @Email(message = "Email must be a valid address")
     private String email;
 

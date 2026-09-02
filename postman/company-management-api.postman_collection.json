@@ -8,38 +8,183 @@
   },
   "item": [
     {
-      "name": "GET all join fetch",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://127.0.0.1:8099/api/company",
-          "protocol": "http",
-          "host": [
-            "127",
-            "0",
-            "0",
-            "1"
-          ],
-          "port": "8099",
-          "path": [
-            "api",
-            "company"
-          ]
+      "name": "Department",
+      "item": [
+        {
+          "name": "POST create department",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Customer Service\",\r\n  \"location\": \"Sibiu\",\r\n  \"budget\": 150000\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8099/api/department",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8099",
+              "path": [
+                "api",
+                "department"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT update department",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Legal\",\r\n  \"location\": \"Brasov\",\r\n  \"budget\": 190000\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8099/api/department/6",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8099",
+              "path": [
+                "api",
+                "department",
+                "6"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH update partial",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"budget\": 315000.0\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8099/api/department/4/budget",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8099",
+              "path": [
+                "api",
+                "department",
+                "4",
+                "budget"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET all join fetch",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8099/api/company",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8099",
+              "path": [
+                "api",
+                "company"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE by id",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8099/api/department/4",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8099",
+              "path": [
+                "api",
+                "department",
+                "4"
+              ]
+            }
+          },
+          "response": []
         }
-      },
-      "response": []
+      ]
     },
     {
-      "name": "POST create department",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": ""
+      "name": "Employee",
+      "item": [
+        {
+          "name": "GET all",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8099/api/employees",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8099",
+              "path": [
+                "api",
+                "employees"
+              ]
+            }
+          },
+          "response": []
         }
-      },
-      "response": []
+      ]
     }
   ]
 }

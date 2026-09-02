@@ -1,5 +1,6 @@
 package unu_la_multi.company_management.CompanyManagement.employee.services;
 
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 import unu_la_multi.company_management.CompanyManagement.department.exceptions.DepartmentIdNotFound;
@@ -9,11 +10,12 @@ import unu_la_multi.company_management.CompanyManagement.employee.dtos.EmployeeC
 import unu_la_multi.company_management.CompanyManagement.employee.dtos.EmployeeResponse;
 import unu_la_multi.company_management.CompanyManagement.employee.models.Employee;
 import unu_la_multi.company_management.CompanyManagement.employee.repository.EmployeeRepository;
-import unu_la_multi.company_management.CompanyManagement.employee.services.interfaces.EmployeeComandService;
+import unu_la_multi.company_management.CompanyManagement.employee.services.interfaces.EmployeeCommandService;
 
 @Service
 @Validated
-public class EmployeeCommandServiceImpl implements EmployeeComandService {
+@Transactional
+public class EmployeeCommandServiceImpl implements EmployeeCommandService {
 
     private final EmployeeRepository employeeRepository;
     private final DepartmentRepository departmentRepository;

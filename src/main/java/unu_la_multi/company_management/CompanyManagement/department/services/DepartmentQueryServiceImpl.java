@@ -13,6 +13,7 @@ import java.util.List;
 
 @Service
 @Validated
+@Transactional
 public class DepartmentQueryServiceImpl implements DepartmentQueryService {
 
     private final DepartmentRepository departmentRepository;
@@ -22,8 +23,6 @@ public class DepartmentQueryServiceImpl implements DepartmentQueryService {
 
     @Override
     public List<DepartmentResponse> getDepartmentsWithEmployees() {
-        if(departmentRepository.getDepartmentsWithEmployees().isEmpty())
-            throw new NoDepartmentFound();
 
         return departmentRepository.getDepartmentsWithEmployees()
                 .stream()

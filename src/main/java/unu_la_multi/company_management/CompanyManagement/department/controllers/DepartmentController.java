@@ -4,8 +4,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import unu_la_multi.company_management.CompanyManagement.department.dtos.DepartmentCreateRequest;
-import unu_la_multi.company_management.CompanyManagement.department.dtos.DepartmentResponse;
+import unu_la_multi.company_management.CompanyManagement.department.dtos.*;
 import unu_la_multi.company_management.CompanyManagement.department.services.interfaces.DepartmentCommandService;
 import unu_la_multi.company_management.CompanyManagement.department.services.interfaces.DepartmentQueryService;
 
@@ -33,6 +32,24 @@ public class DepartmentController {
     public ResponseEntity<DepartmentResponse> createDepartment(@Valid @RequestBody DepartmentCreateRequest departmentCreateRequest) {
         DepartmentResponse created = departmentCommandService.createDepartment(departmentCreateRequest);
         return ResponseEntity.ok(created);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<DepartmentUpdateResponse> updateDepartment(@PathVariable Long id, @Valid @RequestBody DepartmentUpdateRequest departmentUpdateRequest) {
+        DepartmentUpdateResponse updated = departmentCommandService.updateDepartment(id, departmentUpdateRequest);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PatchMapping("/{id}/budget")
+    public ResponseEntity<ChangeBudgetResponse> changeBudget(
+            @PathVariable Long id,
+            @Valid @RequestBody ChangeBudgetRequest changeBudgetRequest) {
+        return ResponseEntity.ok(departmentCommandService.changeBudget(id, changeBudgetRequest));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<DepartmentDeleteResponse> deleteDepartment(@PathVariable Long id) {
+        return ResponseEntity.ok(departmentCommandService.deleteDepartment(id));
     }
 
 }

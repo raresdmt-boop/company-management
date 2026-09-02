@@ -1,9 +1,10 @@
 package unu_la_multi.company_management.CompanyManagement.department.services;
 
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
-import unu_la_multi.company_management.CompanyManagement.department.dtos.DepartmentCreateRequest;
-import unu_la_multi.company_management.CompanyManagement.department.dtos.DepartmentResponse;
+import unu_la_multi.company_management.CompanyManagement.department.dtos.*;
+import unu_la_multi.company_management.CompanyManagement.department.exceptions.DepartmentIdNotFound;
 import unu_la_multi.company_management.CompanyManagement.department.models.Department;
 import unu_la_multi.company_management.CompanyManagement.department.repository.DepartmentRepository;
 import unu_la_multi.company_management.CompanyManagement.department.services.interfaces.DepartmentCommandService;
@@ -12,6 +13,7 @@ import unu_la_multi.company_management.CompanyManagement.employee.models.Employe
 
 @Service
 @Validated
+@Transactional
 public class DepartmentCommandServiceImpl implements DepartmentCommandService {
 
     private final DepartmentRepository departmentRepository;
@@ -29,19 +31,6 @@ public class DepartmentCommandServiceImpl implements DepartmentCommandService {
                 request.budget()
         );
 
-        if(request.employees() != null) {
-            request.employees().forEach(employeeRequest -> {
-                Employee employee = new Employee(
-                        employeeRequest.firstName(),
-                        employeeRequest.lastName(),
-                        employeeRequest.email(),
-                        employeeRequest.salary(),
-                        employeeRequest.jobTitle(),
-                        employeeRequest.accessCode()
-                );
-                department.addEmployee(employee);
-            });
-        }
 
         departmentRepository.save(department);
 
@@ -54,4 +43,54 @@ public class DepartmentCommandServiceImpl implements DepartmentCommandService {
                         .toList());
 
     }
+
+    @Override
+    public DepartmentUpdateResponse updateDepartment(Long id, DepartmentUpdateRequest request) {
+        if(!departmentRepository.existsById(id)) {
+            throw new DepartmentIdNotFound();
+        }
+        Department department = departmentRepository.findById(id).orElseThrow();
+
+        if(request.name() != null && !request.name().isEmpty()) {
+            department.setName(request.name());
+        }
+        if(request.location() != null && !request.location().isEmpty()) {
+            department.setLocation(request.location());
+        }
+        if(request.budget() != null){
+            department.setBudget(request.budget());
+        }
+        departmentRepository.save(department);
+        return new DepartmentUpdateResponse(
+                department.getId(),
+                department.getName(),
+                department.getLocation(),
+                department.getBudget()
+        );
+    }
+
+    @Override
+    public ChangeBudgetResponse changeBudget(Long id, ChangeBudgetRequest changeBudgetRequest) {
+        Department  department = departmentRepository.findById(id).orElseThrow();
+
+        int updatedRows = departmentRepository.updateBudgetByName(department.getName(), changeBudgetRequest.budget());
+        return new ChangeBudgetResponse(
+                department.getId(),
+                department.getName(),
+                changeBudgetRequest.budget(),
+                updatedRows);
+    }
+
+    @Override
+    public DepartmentDeleteResponse deleteDepartment(Long id) {
+        Department department = departmentRepository.findById(id).orElseThrow();
+
+        departmentRepository.delete(department);
+
+        return new DepartmentDeleteResponse(
+                department.getId(),
+                department.getName()
+        );
+    }
+
 }

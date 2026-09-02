@@ -1,9 +1,7 @@
 package unu_la_multi.company_management.CompanyManagement.employee.dtos;
 
-import jakarta.annotation.Nullable;
-import jakarta.persistence.Column;
 import jakarta.validation.constraints.*;
-import org.hibernate.engine.spi.ManagedEntity;
+import unu_la_multi.company_management.CompanyManagement.employee.models.Employee;
 
 import java.math.BigDecimal;
 
@@ -26,11 +24,12 @@ public record EmployeeCreateRequest(
         @Positive(message = "Salary must be pozitive")
         BigDecimal salary,
 
-        @Size(min = 2, max = 50)
+        @Size(min = 2, max = 20)
         String jobTitle,
 
         @NotBlank(message = "Access code required")
         @Size(message ="Access code must be exactly 6 characters", min = 6, max = 6)
         String accessCode
 ) {
+
 }
