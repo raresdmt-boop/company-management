@@ -1,5 +1,6 @@
 package unu_la_multi.company_management.CompanyManagement.department.dtos;
 
+import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.*;
 import unu_la_multi.company_management.CompanyManagement.employee.dtos.EmployeeCreateRequest;
 
@@ -17,6 +18,7 @@ public record DepartmentCreateRequest(
         @PositiveOrZero(message = "Department budget cannot be negative")
         Double budget,
 
+        @Nullable
         List<EmployeeCreateRequest> employees
 ) {
 }

@@ -29,17 +29,19 @@ public class DepartmentCommandServiceImpl implements DepartmentCommandService {
                 request.budget()
         );
 
-        request.employees().forEach(employeeRequest -> {
-            Employee employee = new Employee(
-                    employeeRequest.firstName(),
-                    employeeRequest.lastName(),
-                    employeeRequest.email(),
-                    employeeRequest.salary(),
-                    employeeRequest.jobTitle(),
-                    employeeRequest.accessCode()
-            );
-            department.addEmployee(employee);
-        });
+        if(request.employees() != null) {
+            request.employees().forEach(employeeRequest -> {
+                Employee employee = new Employee(
+                        employeeRequest.firstName(),
+                        employeeRequest.lastName(),
+                        employeeRequest.email(),
+                        employeeRequest.salary(),
+                        employeeRequest.jobTitle(),
+                        employeeRequest.accessCode()
+                );
+                department.addEmployee(employee);
+            });
+        }
 
         departmentRepository.save(department);
 

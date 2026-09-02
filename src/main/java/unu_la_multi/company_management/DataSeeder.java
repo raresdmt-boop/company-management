@@ -27,6 +27,8 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
 
+        if(departmentRepository.count()>0) return;
+
         DepartmentCreateRequest departmentIT =
                 new DepartmentCreateRequest(
                         "IT",
