@@ -8,5 +8,5 @@ import java.util.List;
 public interface EmployeeQueryService {
 
     List<EmployeeResponse> getEmployees();
-
+    EmployeeResponse getEmployee(Long id);
 }

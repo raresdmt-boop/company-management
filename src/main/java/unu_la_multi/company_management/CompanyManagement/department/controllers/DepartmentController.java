@@ -65,5 +65,9 @@ public class DepartmentController {
         return ResponseEntity.ok(departmentQueryService.getAllEmployeeCounts());
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<DepartmentResponse> getDepartmentById(@PathVariable Long id){
+        return ResponseEntity.ok(departmentQueryService.getDepartmentById(id));
+    }
 
 }

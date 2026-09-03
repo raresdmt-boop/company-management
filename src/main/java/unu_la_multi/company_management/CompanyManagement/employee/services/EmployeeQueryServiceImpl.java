@@ -4,6 +4,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 import unu_la_multi.company_management.CompanyManagement.employee.dtos.EmployeeResponse;
+import unu_la_multi.company_management.CompanyManagement.employee.exceptions.EmployeeIdNotFound;
 import unu_la_multi.company_management.CompanyManagement.employee.exceptions.NoEmployeesFound;
 import unu_la_multi.company_management.CompanyManagement.employee.repository.EmployeeRepository;
 import unu_la_multi.company_management.CompanyManagement.employee.services.interfaces.EmployeeQueryService;
@@ -32,6 +33,10 @@ public class EmployeeQueryServiceImpl implements EmployeeQueryService {
                 .toList();
     }
 
+    @Override
+    public EmployeeResponse getEmployee(Long id) {
+        return EmployeeResponse.from(employeeRepository.findById(id).orElseThrow(EmployeeIdNotFound::new));
+    }
 
 
 }

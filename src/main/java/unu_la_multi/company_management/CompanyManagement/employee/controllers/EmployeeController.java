@@ -58,4 +58,9 @@ public class EmployeeController {
         return ResponseEntity.ok(employeeCommandService.deleteEmployee(employeeId));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<EmployeeResponse> getEmployee(@PathVariable("id") Long employeeId) {
+        return ResponseEntity.ok(employeeQueryService.getEmployee(employeeId));
+    }
+
 }
