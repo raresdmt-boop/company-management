@@ -4,11 +4,14 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 import unu_la_multi.company_management.CompanyManagement.department.dtos.DepartmentEmployeeCount;
+import unu_la_multi.company_management.CompanyManagement.department.dtos.DepartmentEmployeesResponse;
 import unu_la_multi.company_management.CompanyManagement.department.dtos.DepartmentResponse;
+import unu_la_multi.company_management.CompanyManagement.department.exceptions.DepartmentNotFound;
 import unu_la_multi.company_management.CompanyManagement.department.exceptions.NoDepartmentFound;
 import unu_la_multi.company_management.CompanyManagement.department.models.Department;
 import unu_la_multi.company_management.CompanyManagement.department.repository.DepartmentRepository;
 import unu_la_multi.company_management.CompanyManagement.department.services.interfaces.DepartmentQueryService;
+import unu_la_multi.company_management.CompanyManagement.employee.dtos.EmployeeResponse;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -61,6 +64,21 @@ public class DepartmentQueryServiceImpl implements DepartmentQueryService {
             counts.add(getEmployeeCount(d.getId()));
         }
         return counts;
+    }
+
+    @Override
+    public DepartmentEmployeesResponse getAllEmployeesByDepartmentId(Long departmentId) {
+        if(departmentRepository.getDepartmentById(departmentId) == null) throw new DepartmentNotFound();
+
+        Department department = departmentRepository.getDepartmentById(departmentId);
+
+        return new DepartmentEmployeesResponse(
+                department.getName(),
+                department.getEmployees()
+                        .stream()
+                        .map(EmployeeResponse::from)
+                        .toList()
+        );
     }
 
 

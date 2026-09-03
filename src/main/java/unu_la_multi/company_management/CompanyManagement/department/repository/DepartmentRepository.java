@@ -28,6 +28,7 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
             """)
     long countEmployeesByDepartmentId(@Param("id") Long id);
 
-
+    @EntityGraph(attributePaths = "employees")
+    Department getDepartmentById(Long id);
 
 }

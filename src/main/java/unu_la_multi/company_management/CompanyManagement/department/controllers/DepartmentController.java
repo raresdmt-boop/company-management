@@ -70,4 +70,9 @@ public class DepartmentController {
         return ResponseEntity.ok(departmentQueryService.getDepartmentById(id));
     }
 
+    @GetMapping("/{departmentId}/employees")
+    public ResponseEntity<DepartmentEmployeesResponse> getEmployeesByDepartmentId(@PathVariable Long departmentId){
+        return ResponseEntity.ok(departmentQueryService.getAllEmployeesByDepartmentId(departmentId));
+    }
+
 }
