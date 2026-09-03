@@ -4,232 +4,233 @@ Proiect Spring Boot 4.1.1 / Java 21, temă JPA 1—* (`Department` 1—* `Employ
 
 ---
 
-## Runda 3 — 2026-09-02 — sha `edebe10`
+## Runda 4 — 2026-09-03 — sha `24e6f9c`
 
 **Poarta de compilare:** ✅ trece.
-**Verificat prin rulare:** pornit pe H2, 14 probe HTTP. Fiecare 🔴 de mai jos are cererea și răspunsul exact.
+**Verificat prin rulare:** pornit pe H2, 11 probe HTTP. Fiecare 🔴 are cererea și răspunsul exact.
 
-Rundă mare și, în bună parte, bună: ai închis 7 constatări, ai scris de la zero `EmployeeController`, `EmployeeQueryService`, PUT/PATCH/DELETE pe departament și ai refăcut seeder-ul. Diagnosticul de mai jos e lung pentru că ai scris mult cod nou, nu pentru că ai regresat.
+Ai construit CRUD-ul complet pe angajat — create, update, două variante de patch pe salariu, delete — plus DTO-uri și excepție proprie. Constatările de mai jos sunt aproape toate **în codul nou**, nu regresii în cel vechi.
 
 ### ✅ Ce ai închis
 
 | Din | Constatare | Verificat |
 |---|---|---|
-| R2 B1 | Buildul e rupt (rename de fișier fără rename de tip) | `mvn compile` trece |
-| R1 B3 | Lista goală tratată ca eroare, la departamente | `GET /api/department` pe DB goală → **`200 []`** |
-| R1 B5 | `jobTitle` DTO 50 vs coloană 20 | acum `@Size(min = 2, max = 20)` ↔ `length = 20`; ai pus și `@Size` pe `email` în entitate |
-| R1 B1 | `@Valid` nu coboară în `List<EmployeeCreateRequest>` | rezolvat **prin eliminare** — ai scos lista din `DepartmentCreateRequest` (vezi nota de mai jos) |
-| R1 M2 | `hibernate.dialect` hardcodat | scos din `application.yaml` |
-| R1 M3 | Un `GET` = două SELECT-uri, la departamente | acum unul singur |
-| R1 M6 | Niciun serviciu `@Transactional` | pus pe toate patru |
-| R1 M9 | `EmployeeComandService` | redenumit corect, fișier + tip |
-
-### ⭐ Un lucru pe care l-ai făcut mai bine decât ceream
-
-`DepartmentRepository.java:19`
-
-```java
-@Modifying(clearAutomatically = true, flushAutomatically = true)
-@Query("update Department d set d.budget = :newBudget where d.name = :name")
-```
-
-Cele două flag-uri nu ți le-a cerut nimeni, și sunt exact ce trebuie. Merită să știi **de ce**, pentru că e capcana clasică a lui `@Modifying`:
-
-Un `update` JPQL de tip bulk se duce **direct în baza de date**, ocolind persistence context-ul. Hibernate nu are cum să ghicească ce entități din memorie a invalidat. Fără `clearAutomatically = true`, entitatea `Department` pe care o ai deja încărcată rămâne cu bugetul vechi, și orice citire ulterioară din aceeași tranzacție îți dă valoarea veche — un update care „nu se vede", cel mai frustrant bug din JPA. `flushAutomatically = true` rezolvă simetricul: forțează scrierea modificărilor în așteptare **înainte** de bulk update, ca acesta să nu lucreze pe date pe cale să fie suprascrise.
-
-Ține minte perechea. E aceeași capcană pe care ai avut-o și la `academy-hub-api`.
+| R3 B1 | `changeBudget` făcea `update ... where d.name` | acum `updateBudgetById(id, ...)`, `where d.id = :id` |
+| R3 B5 | Nu se putea crea un angajat prin API | `POST /api/employees/{departmentid}` există și funcționează |
+| R3 M7 | Postman cerea `/api/company` | scos; colecția acoperă acum tot CRUD-ul, 11 cereri |
+| R3 🟢 C4 | typo „pozitive" | reparat în `EmployeeCreateRequest`… dar copiat în cel nou (vezi C3) |
 
 ---
 
 ## 🔴 Critice
 
-### B1 — `changeBudget` modifică după **nume**, nu după id: schimbi bugetul unui departament și se schimbă al altora
+### B1 — `PUT /api/department/{id}` e mort: `@NotBlank` pe un `Double`
 
-`department/services/DepartmentCommandServiceImpl.java:73-82`
-
-```java
-Department department = departmentRepository.findById(id).orElseThrow();
-int updatedRows = departmentRepository.updateBudgetByName(department.getName(), changeBudgetRequest.budget());
-```
-
-**CUM E ACUM.** Am creat două departamente, ambele numite „Legal" — unul la Cluj cu buget 1000, unul la Iași cu buget 2000. Am cerut schimbarea bugetului **doar** pentru id-ul 4:
-
-```
-PATCH /api/department/4/budget   {"budget": 999999.0}
--> {"id":4,"name":"Legal","budget":999999.0,"updatedRow":2}
-
-id 4 (Cluj): budget 999999.0   <- cerut
-id 5 (Iasi): budget 999999.0   <- NU a cerut nimeni asta
-```
-
-**DE CE.** Ai făcut căutarea corect — `findById(id)` — și apoi ai aruncat id-ul. Din entitatea găsită ai luat `getName()` și ai trimis **numele** în clauza `where` a update-ului. Iar numele nu e unic în tabelul tău: n-ai nicio constrângere care să împiedice două departamente „Legal" (e M10 mai jos, deschisă din runda 1). Un `update ... where d.name = :name` lovește **toate** rândurile care se potrivesc, nu unul.
-
-Update-ul bulk nici măcar nu știe că tu ai încărcat o entitate anume — pentru el, `Department` cu id 4 nu există ca noțiune; există doar o condiție pe o coloană. Cheia primară e singura coloană despre care baza de date îți garantează că selectează exact un rând. Orice altceva e o presupunere.
-
-Și observă că API-ul tău **își mărturisește singur** greșeala: `"updatedRow": 2`. Ai returnat numărul de rânduri afectate, clientul a cerut un departament, iar răspunsul spune negru pe alb că s-au modificat două. Un câmp care nu poate fi decât `1` la un endpoint corect e o alarmă gratuită — dar numai dacă cineva o citește.
-
-**FIX:** `where d.id = :id`, și trimite `id`, nu `department.getName()`. Cu asta, `findById` de dinainte nu-ți mai trebuie decât ca să dai 404 când id-ul nu există.
-
-### B2 — Tot nu există `@RestControllerAdvice`: acum ai patru excepții și toate ies ca 500
-
-A treia rundă la rând pentru constatarea asta.
-
-**CUM E ACUM.** Patru cauze complet diferite, același răspuns gol:
-
-```
-PATCH /api/department/999/budget  -> 500   [NoSuchElementException]
-DELETE /api/department/999        -> 500   [NoSuchElementException]
-PUT   /api/department/999         -> 500   [DepartmentIdNotFound]
-GET   /api/employees  (0 angajati)-> 500   [NoEmployeesFound]
-```
-
-**DE CE.** Când o excepție iese din controller, Spring o dă pe rând la niște `HandlerExceptionResolver`. Cel implicit știe să traducă **doar excepțiile lui**: `MethodArgumentNotValidException` → 400, `HttpMessageNotReadableException` → 400, `NoHandlerFoundException` → 404. `NoEmployeesFound` sau `DepartmentIdNotFound` nu-i spun nimic — sunt `RuntimeException`-uri anonime pentru el. Când niciun resolver nu recunoaște excepția, cererea ajunge la ultima plasă, cea a containerului, care nu poate presupune nimic despre ce s-a întâmplat și răspunde onest: 500, „ceva a crăpat pe server".
-
-`@RestControllerAdvice` e exact locul unde tu îi dai lipsa asta de vocabular: un `@ExceptionHandler` per excepție, cu `@ResponseStatus`-ul potrivit. E singurul strat din aplicație care are voie să știe și de business (`NoEmployeesFound`) și de HTTP (404), fără să le amestece în servicii.
-
-Cât timp lipsește, un client al API-ului tău nu poate distinge „nu există" de „ai trimis prostii" de „a picat baza de date". Iar tu depanezi din log, nu din răspuns.
-
-**FIX:** un `@RestControllerAdvice` cu handlere pentru: excepțiile tale de „nu găsesc" → 404, `MethodArgumentNotValidException` → 400 cu lista câmpurilor, `ConstraintViolationException` → 400, `DataIntegrityViolationException` → 409.
-
-### B3 — `orElseThrow()` fără argument: arunci `NoSuchElementException`, deși ai scris clase de excepție pentru asta
-
-`DepartmentCommandServiceImpl.java:74` (`changeBudget`) și `:86` (`deleteDepartment`)
+`department/dtos/DepartmentUpdateRequest.java:14-16`
 
 ```java
-Department department = departmentRepository.findById(id).orElseThrow();
+@NotBlank(message = "Updating all rows is necessary for PUT mapping")
+@PositiveOrZero(message = "Department budget cannot be negative")
+Double budget
 ```
 
-**CUM E ACUM.** `PATCH /api/department/999/budget` și `DELETE /api/department/999` aruncă `java.util.NoSuchElementException` — confirmat în log, de două ori.
-
-**DE CE.** `Optional` are două metode cu același nume și înțelesuri diferite. `orElseThrow()` fără argument e varianta „nu-mi pasă ce excepție, doar nu-mi da null" — aruncă `NoSuchElementException`, o excepție din `java.util` care nu spune nimic despre domeniul tău. `orElseThrow(Supplier)` e varianta în care **tu** alegi excepția, și abia aia poate fi tradusă mai târziu în 404 de către advice.
-
-Diferența devine vizibilă abia când adaugi advice-ul din B2: `NoSuchElementException` n-ai cum s-o mapezi la 404 fără să prinzi, la grămadă, orice altă bibliotecă care aruncă la fel. Excepția ta proprie e adresabilă.
-
-Detaliul care doare: ai **scris** `DepartmentNotFound` în runda asta (`department/exceptions/DepartmentNotFound.java`) și n-o folosești nicăieri. Ai clasa, ai mesajul, doar n-ai pus-o unde trebuia.
-
-**FIX:** `.orElseThrow(DepartmentIdNotFound::new)` în ambele locuri.
-
-### B4 — `DELETE` pe un departament îi șterge și angajații
-
-`department/models/Department.java:43-48`
-
-**CUM E ACUM.** Am șters departamentul IT, care avea 3 angajați:
+**CUM E ACUM.** *Orice* cerere, oricât de corectă:
 
 ```
-DELETE /api/department/1  -> {"id":1,"name":"IT"}
+PUT /api/department/1   {"name":"IT2","location":"Cluj","budget":5000.0}
+-> 500
 
-GET /api/employees  inainte: 7 angajati
-GET /api/employees  dupa:    4 angajati  (Rares, Andrei si Maria au disparut)
+jakarta.validation.UnexpectedTypeException: HV000030: No validator could be found
+for constraint 'jakarta.validation.constraints.NotBlank' validating type
+'java.lang.Double'. Check configuration for 'budget'
 ```
 
-**DE CE.** Două setări de pe `@OneToMany` lucrează împreună:
+**DE CE.** O adnotare de validare nu validează nimic singură — ea doar *numește* o regulă. Munca o face un `ConstraintValidator`, iar fiecare adnotare vine cu o listă fixă de tipuri pe care le știe verifica. `@NotBlank` are exact una: `CharSequence`. Înseamnă „nu e null, și după `trim()` mai rămâne ceva" — o întrebare care pur și simplu nu are sens pentru un număr.
+
+Partea care te-a păcălit: potrivirea adnotare ↔ tip **nu se face la compilare**. Compilatorul vede o adnotare validă pusă pe un câmp, atât. Hibernate Validator caută validatorul abia când chiar validează, adică la prima cerere care intră pe endpoint. De-aia `mvn compile` trece verde și endpoint-ul e mort.
+
+Ține minte împărțirea, e mică: `@NotNull` pentru orice tip (inclusiv numere și obiecte), `@NotEmpty` pentru texte și colecții (nu e null și are lungime > 0), `@NotBlank` **doar** pentru texte.
+
+**FIX:** pe `budget` pui `@NotNull`. Pe `name` și `location`, `@NotBlank` e corect.
+
+### B2 — `PATCH .../salary` returnează salariul **vechi**
+
+`employee/services/EmployeeCommandServiceImpl.java:95-105`
+
+**CUM E ACUM.** Trei cereri consecutive pe același angajat, care pornește de la 7500:
+
+```
+PATCH /api/employees/1/salary  {"salary":12345}  ->  {"id":1,"salary":7500.00, "updatedRows":1}
+PATCH /api/employees/1/salary  {"salary":22222}  ->  {"id":1,"salary":12345.00,"updatedRows":1}
+```
+
+Baza de date e corectă — a doua cerere dovedește că prima chiar a scris 12345. **Răspunsul e cu un pas în urmă, mereu.**
+
+**DE CE.** E fața cealaltă a monedei pe care ai nimerit-o singur în runda trecută, și de care te-am și lăudat. `@Modifying(clearAutomatically = true)` face exact ce promite: după update-ul bulk, golește persistence context-ul, ca nimeni să nu mai lucreze cu date învechite.
+
+Numai că „nimeni" te include și pe tine. Variabila `employee` de la linia 96 e un obiect Java obișnuit, încărcat **înainte** de update. Golirea contextului nu-i schimbă câmpurile — nu are cum, e doar o referință în stiva ta. Ea îl *detașează*, adică rupe legătura prin care Hibernate ar mai fi putut să-l resincronizeze. Rezultatul: `employee.getSalary()` de la linia 102 citește fotografia de dinainte de update.
+
+Observă că la buget nu ai pățit-o — dar din noroc, nu din construcție: acolo returnezi `changeBudgetRequest.budget()`, adică valoarea cerută, nu una citită din entitate.
+
+**FIX**, două variante:
+- simplu — returnează `request.salary()`, valoarea pe care tocmai ai scris-o (ca la buget);
+- corect în general — dacă ai nevoie de starea reală din baza de date după un bulk update, o reciteşti: `employeeRepository.findById(id).orElseThrow(...)`.
+
+### B3 — `PATCH /api/employees/{id}/{newSalary}` scrie orice în baza de date, inclusiv salarii negative
+
+`employee/controllers/EmployeeController.java:54-60`
+
+**CUM E ACUM.**
+
+```
+PATCH /api/employees/1/-5000     ->  200 OK
+PATCH /api/employees/1/salary  {"salary":1}  ->  {"id":1,"salary":-5000.00,...}
+```
+
+A doua cerere e dovada: salariul citit din baza de date **este** −5000. A intrat și a rămas acolo.
+
+**DE CE.** Două plase de siguranță, ocolite pe rând.
+
+Prima: `@PathVariable BigDecimal newSalary` n-are nicio adnotare de validare. `ChangeSalaryRequest` are `@NotNull` și `@Positive` — dar endpoint-ul ăsta nu trece pe acolo, ia numărul direct din URL. Un parametru fără constrângere nu e validat, indiferent că `@Validated` stă pe clasa controller-ului.
+
+A doua, cea interesantă: entitatea `Employee` **are** `@Positive` pe `salary` (`Employee.java:45`) — și totuși n-a oprit nimic. Motivul e că validarea entităților în Hibernate se agață de evenimentele ciclului de viață al obiectelor: `pre-insert` și `pre-update`, adică momentele în care Hibernate scrie în baza de date **o entitate din persistence context**. Un `update ... set` JPQL de tip bulk nu are entitate: nu încarcă niciun obiect, nu face dirty checking, nu emite niciun eveniment. Trimite un `UPDATE` direct la baza de date și numără rândurile.
+
+De aici o regulă care merită ținută minte: **datele care intră printr-un bulk update sunt validate doar de tine și de constrângerile din schemă.** Bean Validation nu e acolo. Dacă vrei ca `salary > 0` să fie garantat indiferent pe unde intră datele, îl pui și ca `CHECK` în baza de date.
+
+**FIX:** șterge endpoint-ul — duplică `PATCH /{id}/salary`, care are deja validarea corectă. Dacă vrei totuși să-l păstrezi, parametrul are nevoie de `@Positive` **și** de un `@Min` pe path, iar update-ul de un `CHECK (salary > 0)` în schemă.
+
+*(Bonus: `@PatchMapping("/{id}/{newSalary}")` se suprapune cu `@PatchMapping("/{id}/salary")`. `PATCH /api/employees/5/salary` s-ar putea potrivi la amândouă; merge doar pentru că Spring preferă segmentul literal celui variabil. E o regulă de departajare pe care te bazezi fără să o fi ales.)*
+
+### B4 — `PUT` pe angajat ignoră în tăcere emailul deja folosit și răspunde `200 OK`
+
+`EmployeeCommandServiceImpl.java:68-70`
 
 ```java
-cascade = CascadeType.ALL,
-orphanRemoval = true
-```
-
-`CascadeType.ALL` înseamnă „propagă către copii **toate** operațiile pe care le fac pe părinte" — inclusiv `REMOVE`. `orphanRemoval = true` merge mai departe: „dacă un copil e scos din colecție, șterge-l din baza de date, chiar dacă n-am cerut explicit `remove`".
-
-Amândouă sunt corecte când copiii nu au sens fără părinte — pozițiile unei facturi, de exemplu: nu există „linie de factură orfană". Un angajat **nu** e în categoria asta. Un om există independent de departamentul în care lucrează; când desființezi departamentul, oamenii se mută, nu dispar.
-
-Nu e neapărat un bug — e o **decizie de design pe care ai luat-o fără să o iei**, prin copierea unui `cascade = ALL` implicit. Întrebarea la care trebuie să răspunzi tu: în aplicația asta, ce înseamnă „șterg un departament"?
-
-**FIX**, în funcție de răspuns:
-- „angajații rămân, fără departament" → `cascade = {PERSIST, MERGE}`, fără `orphanRemoval`, iar în `deleteDepartment` dezleagă întâi angajații (`department_id = null`).
-- „nu poți șterge un departament cu angajați" → verifici `!department.getEmployees().isEmpty()` și arunci o excepție de business → 409.
-
-### B5 — Încă nu se poate **crea** un angajat prin API
-
-`employee/controllers/EmployeeController.java` are un singur `@GetMapping`. `createEmployeeWithDepartment` există, e corect, e `@Transactional` — și e chemat exclusiv de `DataSeeder`.
-
-**CUM E ACUM.** Toate variantele plauzibile de path:
-
-```
-POST /api/employees            -> 405 Method Not Allowed
-POST /api/department/2/employees -> 404
-POST /api/employee             -> 404
-```
-
-**DE CE.** `405` de la prima e chiar semnalul util: Spring îți spune „path-ul `/api/employees` există, dar nu am mapping pentru metoda POST" — adică ai controller-ul, îți lipsește doar metoda. La celelalte două nici path-ul nu există.
-
-Practic, singurul mod în care un angajat ajunge în baza de date e seeder-ul de la pornire. Un client al API-ului tău poate citi angajați, dar nu poate adăuga niciunul.
-
-E a treia rundă pentru constatarea asta (B4 în runda 1, B6 în runda 2). Ai construit între timp tot ce e în jur — serviciu, DTO, validare, tranzacție — și ai sărit peste cele 5 rânduri care le fac accesibile.
-
-**FIX:** un `@PostMapping("/{departmentId}/employees")` în `DepartmentController` (angajatul se creează *în* un departament, deci resursa e imbricată), care primește `@Valid @RequestBody EmployeeCreateRequest` și `@PathVariable Long departmentId`, și returnează `201 Created`.
-
-### B6 — Ai reparat regula într-un fișier și ai rescris-o greșit în celălalt, în aceeași rundă
-
-`employee/services/EmployeeQueryServiceImpl.java:26-29`
-
-```java
-if(employeeRepository.findAll().isEmpty()) {
-    throw new NoEmployeesFound();
+if(request.email()!=null && !request.email().isBlank() && !employeeRepository.existsByEmail(request.email())){
+    employee.setEmail(request.email());
 }
-return employeeRepository.findAll()
 ```
 
-**CUM E ACUM.** Exact cele două defecte pe care tocmai le-ai șters din `DepartmentQueryServiceImpl`:
+**CUM E ACUM.** Angajatul 2 e Andrei (`andrei@gmail.com`). Cer să-i schimb emailul în cel al Mariei, care există deja:
 
 ```
-GET /api/employees  (0 angajati)  -> 500     (o colectie goala nu e o eroare)
-GET /api/employees  (cu date)     -> 2 SELECT-uri identice, masurat cu show-sql
+PUT /api/employees/2  {..., "email":"maria@gmail.com", ...}
+-> 200 OK
+   {"id":2,"firstName":"Andrei",...,"email":"andrei@gmail.com",...}
 ```
 
-**DE CE.** Asta nu e o greșeală de Spring, e una de metodă de lucru, și e cel mai util lucru din review-ul ăsta. În runda asta ai deschis `DepartmentQueryServiceImpl`, ai șters `isEmpty() + throw`, ai pus rezultatul într-o singură chemare — perfect. Apoi ai scris `EmployeeQueryServiceImpl` de la zero și ai reprodus **fix aceleași două erori**, pentru că le-ai reparat ca pe niște *linii*, nu ca pe o *regulă*.
+Statusul zice „am făcut ce ai cerut". Emailul din răspuns e cel vechi. Clientul are 200 în mână și o modificare care nu s-a întâmplat.
 
-Tiparul ăsta („repar apariția semnalată, las celelalte apariții") ți l-am semnalat și la `academy-hub-api`, unde regula era apărată la `create` și cădea la `update`. E același mecanism.
+**DE CE.** Ai transformat o **regulă de business** într-o **condiție de atribuire**. `if (email e liber) setează` are un `else` implicit pe care nu l-ai scris: *nu face nimic, și nu spune nimănui*. Din exterior, „am refuzat" și „am reușit" arată identic.
 
-Antidotul e mecanic, nu ține de talent: **după ce închizi o constatare, caută-i forma în tot proiectul înainte de commit.** Aici erau două căutări de câte zece secunde:
+Un API poate răspunde la o cerere în trei feluri: o face, o refuză cu un motiv, sau crapă. Tăcerea nu e printre ele. Aici cazul corect e refuzul: emailul e unic prin constrângere de bază de date (`uk_employee_email`), deci un conflict e un rezultat legitim și numit — `409 Conflict`.
+
+Mai e o consecință pe care n-ai văzut-o: `existsByEmail` e adevărat și pentru **propriul** email al angajatului. Un `PUT` care păstrează emailul neschimbat intră tot pe ramura tăcută. Nu strică nimic azi, dar arată că verificarea nu e „e liber?", ci „e liber pentru altcineva?".
+
+**FIX:**
+
+```java
+employeeRepository.findByEmail(request.email())
+        .filter(other -> !other.getId().equals(id))
+        .ifPresent(other -> { throw new EmailAlreadyUsed(); });
+employee.setEmail(request.email());
+```
+
+…și `EmailAlreadyUsed` → `409` din advice-ul de la B5.
+
+### B5 — Tot nu există `@RestControllerAdvice`. A patra rundă.
+
+**CUM E ACUM.**
 
 ```
-grep -rn "isEmpty()" src/main/java
-grep -rn "findAll()" src/main/java
+POST /api/employees/999   (departament inexistent)  -> 500
+PUT  /api/employees/999   (angajat inexistent)      -> 500
+PUT  /api/department/1    (bug-ul B1)               -> 500
 ```
 
-Prima ți-ar fi arătat al doilea `throw`, a doua ți-ar fi arătat dubla interogare.
+Primele două sunt „nu găsesc resursa" — un 404 curat. Al treilea e un bug real de configurare, deci un 500 onest. **Toate trei arată identic pentru client.** Asta e problema: fără advice, n-ai cum să deosebești o cerere greșită de o aplicație stricată, nici din afară, nici din monitorizare.
 
-**FIX:** scoate `if/throw`, o singură chemare `findAll()` într-o variabilă, `200 []` pe listă goală.
+Mecanismul l-am descris în runda 3 (rezolverele implicite ale Spring știu să traducă doar excepțiile Spring; ale tale sunt `RuntimeException`-uri anonime pentru ele, deci cad până la ultima plasă, care răspunde 500).
+
+E constatarea cea mai veche deschisă din proiect — din runda 1. Fiecare rundă a adăugat între timp excepții noi: acum ai **șase** clase de excepție (`DepartmentIdNotFound`, `DepartmentNotFound`, `NoDepartmentFound`, `EmployeeIdNotFound`, `NoEmployeesFound`, plus cea de la B4 pe care o vei scrie) și zero handlere. Cu cât amâni, cu atât advice-ul devine mai mare de scris — deși e același efort pe excepție.
+
+**FIX:** o clasă, `@RestControllerAdvice`, cu un `@ExceptionHandler` pentru fiecare familie. 30 de rânduri, o dată.
+
+### B6 — Ai reparat `orElseThrow()` în trei locuri din șapte
+
+Ți-am semnalat în runda 3 că `orElseThrow()` fără argument aruncă `NoSuchElementException`. Ai reparat — în serviciul de angajați, la trei metode:
+
+| Fișier:linie | Metodă | Stare |
+|---|---|---|
+| `EmployeeCommandServiceImpl.java:96` | `changeSalary` | ✅ `orElseThrow(EmployeeIdNotFound::new)` |
+| `EmployeeCommandServiceImpl.java:109` | `changeSalaryThruUrl` | ✅ |
+| `EmployeeCommandServiceImpl.java:122` | `deleteEmployee` | ✅ |
+| `EmployeeCommandServiceImpl.java:34` | `createEmployeeWithDepartment` | 🔴 `orElseThrow()` gol |
+| `EmployeeCommandServiceImpl.java:60` | `updateEmployee` | 🔴 gol |
+| `DepartmentCommandServiceImpl.java:75` | `changeBudget` | 🔴 gol |
+| `DepartmentCommandServiceImpl.java:87` | `deleteDepartment` | 🔴 gol |
+
+Patru dintre ele sunt în **același fișier** cu cele trei reparate, două chiar deasupra lor.
+
+**DE CE contează, dincolo de cele patru linii.** E a doua rundă la rând când repari apariția semnalată și lași restul. În runda 3 era `isEmpty() + throw`, reparat la departamente și rescris identic la angajați. Acum e `orElseThrow()`, reparat în jumătatea de jos a unui fișier și lăsat în jumătatea de sus.
+
+Nu e neatenție — e ordinea în care lucrezi. Citești constatarea, te duci la `file:line`, repari acolo, treci mai departe. Pasul care lipsește e **unul singur**, și durează zece secunde:
+
+```
+grep -rn "orElseThrow()" src/main/java
+```
+
+Rulează-l acum. Îți dă exact cele patru linii de mai sus, fără să le caut eu. Fă-l reflex după fiecare constatare închisă, **înainte** de commit — altfel fiecare rundă redeschide subiectul precedent și ajungem să discutăm de trei ori aceeași regulă în loc să trecem la următoarea.
+
+### B7 — `DELETE` pe departament tot șterge angajații (deschis din runda 3)
+
+**CUM E ACUM.** Confirmat din nou:
+
+```
+GET /api/employees            -> 7 angajati
+DELETE /api/department/2
+GET /api/employees            -> 5 angajati
+```
+
+Mecanismul e explicat în runda 3 (B4): `cascade = CascadeType.ALL` propagă și `REMOVE`, iar `orphanRemoval = true` șterge copiii scoși din colecție. Amândouă sunt potrivite pentru copii care nu există fără părinte (linii de factură), nu pentru oameni.
+
+Acum e mai grav decât în runda 3, pentru un motiv nou: atunci angajații intrau în baza de date doar prin seeder. Azi ai `POST /api/employees/{departmentid}`, deci un client îți poate crea 50 de angajați și îi poate pierde pe toți cu un `DELETE` care, din afară, pare că șterge un departament gol.
+
+**Rămâne o decizie de design pe care trebuie s-o iei tu** — variantele sunt în runda 3.
 
 ---
 
 ## 🟡 Importante
 
-**M1 — interfața de serviciu importă adnotări de Spring Web.** `department/services/interfaces/DepartmentCommandService.java:12-13` — `@PathVariable` și `@RequestBody` pe parametrii unei metode de serviciu. Nu fac nimic acolo (le citește doar `DispatcherServlet`-ul, pe metodele de controller), dar semnalul e mai grav decât efectul: stratul de business ajunge să știe că deasupra lui e HTTP. Mâine, când chemi același serviciu dintr-un job programat sau dintr-un test, adnotările n-au niciun sens. Șterge-le, cu tot cu importuri.
+**M1 — `POST /api/employees/{departmentid}` spune altceva decât face.** Într-un URL REST, segmentul de după numele colecției e id-ul unei resurse **din acea colecție** — deci `/api/employees/7` înseamnă „angajatul 7". Tu pui acolo id-ul unui departament. Cine citește URL-ul înțelege exact pe dos. Angajatul se creează *într-un* departament, deci resursa e imbricată: `POST /api/departments/{id}/employees`.
 
-**M2 — `PUT` cu semantică de `PATCH`.** `DepartmentCommandServiceImpl.java:54-62` actualizează doar câmpurile ne-null. Efectul, măsurat: `PUT /api/department/4` cu body `{}` → **200**, și nu se schimbă nimic. `PUT` înseamnă „înlocuiește resursa cu ce-ți trimit"; câmpurile lipsă ar trebui respinse (`@NotBlank` pe `DepartmentUpdateRequest`) sau șterse. Actualizarea parțială o ai deja, separat, pe `PATCH /{id}/budget`. Alege: ori faci `PUT`-ul strict, ori îl transformi în `PATCH`.
+**M2 — `changeSalary` și `changeSalaryThruUrl` fac același lucru.** A doua e cea nevalidată (B3). Păstreaz-o pe prima.
 
-**M3 — `existsById` + `findById` = două interogări.** `DepartmentCommandServiceImpl.java:49-52`. `findById(id).orElseThrow(DepartmentIdNotFound::new)` face aceeași treabă cu o singură interogare — și rezolvă și B3 în același timp.
+**M3 — gărzile din `updateEmployee` sunt cod mort.** `EmployeeUpdateRequest` are acum `@NotBlank`/`@NotNull` pe toate câmpurile — bine, e semantică de `PUT` corectă. Dar asta înseamnă că `if(request.firstName()!=null && !request.firstName().isBlank())` din serviciu nu poate fi niciodată fals: validarea a respins deja cererea înainte să ajungă acolo. Șase `if`-uri care nu se pot închide. Scoate-le.
 
-**M4 — trei excepții pentru aceeași idee.** `DepartmentIdNotFound`, `DepartmentNotFound` (scrisă în runda asta, nefolosită nicăieri) și `NoDepartmentFound` (rămasă din runda 1, acum nefolosită). Păstrează una, șterge două. Trei nume pentru „nu găsesc departamentul" înseamnă că peste o lună o să pui `@ExceptionHandler` pe cea greșită.
+**M4 — `EmployeeResponse.from` presupune că orice angajat are departament.** `employee.getDepartment().getName()` — dar coloana `department_id` e nullable, iar în varianta „angajații rămân după ștergerea departamentului" din B7 vei avea exact angajați fără departament. Atunci endpoint-ul de listare va da `NullPointerException` → 500. Tratează cazul acum: `department == null ? null : department.getName()`.
 
-**M5 — `@Transactional` de la `jakarta.transaction`, nu de la Spring.** Toate cele patru servicii. Funcționează, dar varianta `org.springframework.transaction.annotation.Transactional` are `readOnly = true` — iar cele două servicii de query sunt acum marcate ca tranzacții de scriere. `readOnly` scutește Hibernate de dirty checking la commit și, pe unele baze, îi permite driverului să rutdeze citirea către o replică.
+**M5 — POST tot răspunde `200 OK`** în loc de `201 Created` + `Location`. Deschis din runda 1, acum pe două endpoint-uri.
 
-**M6 — POST tot răspunde `200 OK`** în loc de `201 Created` + `Location`. Deschis din runda 1.
+**M6 — `ChangeSalaryResponse.updatedRows`** — același comentariu ca la buget: pe un `PATCH` care vizează o singură resursă, numărul de rânduri afectate nu poate fi decât 1, deci nu comunică nimic clientului.
 
-**M7 — colecția Postman: „GET all join fetch" cere tot `/api/company`** → 404. Ai rescris-o aproape complet și frumos (Department / Employee, PUT, PATCH, DELETE), dar cererea asta a rămas pe path-ul șters în `19753fd`.
+**M7 — `@Transactional` de la `jakarta.transaction`**, iar cele două servicii de query n-au `readOnly = true`. Deschis din runda 3.
 
-**M8 — `/api/department` la singular, `/api/employees` la plural.** Acum inconsistența e în interiorul aceleiași aplicații. Pluralul e convenția: `/api/departments`.
+**M8 — adnotări de web în interfețe de serviciu.** `DepartmentCommandService.java:12-13` importă și folosește `@PathVariable`/`@RequestBody`; `EmployeeCommandService.java:4` importă `@Validated` fără să-l folosească.
 
-**M9 — `ChangeBudgetResponse.updatedRow`** expune clientului un detaliu de implementare (că sub capotă e un update bulk). Într-un API corect, numărul de rânduri afectate de un `PATCH` pe **o** resursă e întotdeauna 1 — deci câmpul n-are ce comunica. Scoate-l după ce repari B1.
+**M9 — `/api/department` singular, `/api/employees` plural.** Aceeași aplicație, două convenții.
 
-**M10 — numele departamentului tot nu e unic.** E cauza-rădăcină a lui B1. Dacă regula de business e „un departament pe nume", pune `@UniqueConstraint` pe `department(name)` — ai făcut-o corect pe `employee(email)` și pe `access_code`, deci știi cum.
-
-**M11 — `mvnw` tot comis fără bit de execuție** (mod `100644`): `git update-index --chmod=+x mvnw`.
+**M10 — numele departamentului tot nu e unic;** `mvnw` tot comis fără bit de execuție (`git update-index --chmod=+x mvnw`).
 
 ---
 
 ## 🟢 Cleanups
 
-- **C1 — importuri nefolosite, inclusiv unele adăugate în runda asta:** `EmployeeCreateRequest.java:4` și `EmployeeQueryService.java:4` importă `Employee` (un DTO și o interfață de serviciu n-au ce ști despre entitate) · `DepartmentCreateRequest.java:3,5,7` — `Nullable`, `EmployeeCreateRequest`, `List`, rămase după ce ai scos lista de angajați · `DepartmentQueryServiceImpl.java:7,11` — `NoDepartmentFound` și `ArrayList`, rămase după ce ai reparat B3 din runda 1 · `DepartmentCommandServiceImpl.java:12` — `Employee`.
-- **C2 — mapare duplicată.** `DepartmentCommandServiceImpl.java:37-43` reconstruiește `DepartmentResponse` de mână deși există `DepartmentResponse.from(...)`. Idem în `EmployeeCommandServiceImpl.java:50-54`.
-- **C3 — `jakarta.annotation.Nullable`** pe `Department.java:38` nu face nimic la runtime.
-- **C4 — typo:** `EmployeeCreateRequest.java:24` „Salary must be **pozitive**" → `positive`.
-- **C5 — `root`/`root`** în `application.yaml:4-5` → `${DB_USER}` / `${DB_PASSWORD}`.
-- **C6 — `@Order(1)`** pe singurul `CommandLineRunner` nu ordonează nimic.
-- **C7 — fișiere fără newline la final** (`EmployeeCreateRequest.java`, `application.yaml`) — diff-urile ies murdare.
-- **C8 — `pom.xml`** cu `<name/>`, `<licenses><license/></licenses>` etc. goale.
+- **C1 — `EmployeeCreateRequest.java:4`** importă entitatea `Employee` într-un DTO; **`EmployeeQueryService.java:4`** la fel. Deschise din runda 3.
+- **C2 — mapare duplicată:** `EmployeeCommandServiceImpl.java:49-54` reconstruiește `EmployeeResponse` de mână, deși `EmployeeResponse.from(employee)` face exact asta, acum inclusiv cu `departmentName`.
+- **C3 — typo migrat.** Ai reparat „Salary must be **pozitive**" în `EmployeeCreateRequest.java:24` ✅ — și l-ai copiat, greșit, în `EmployeeUpdateRequest.java:23`. Aceeași poveste ca la B6, în miniatură: reparat unde ți-am arătat, reintrodus prin copy-paste alături.
+- **C4 — mesajul „Updating all rows is necessary for PUT mapping"** apare de trei ori, pe trei câmpuri diferite, și nu spune utilizatorului ce e greșit. Mesajele de validare se adresează clientului API-ului: `"Department name required"`.
+- **C5** — `root`/`root` în `application.yaml:4-5`; **C6** — `@Order(1)` inutil; **C7** — fișiere fără newline final; **C8** — `pom.xml` cu taguri goale.
 
 ---
 
@@ -237,40 +238,56 @@ Prima ți-ar fi arătat al doilea `throw`, a doua ți-ar fi arătat dubla intero
 
 | # | Acum | Corect |
 |---|---|---|
-| **B1** | `int updatedRows = departmentRepository`<br>&nbsp;&nbsp;`.updateBudgetByName(department.getName(), req.budget());`<br><br>`@Query("update Department d set d.budget = :newBudget`<br>&nbsp;&nbsp;`where d.name = :name")` | `departmentRepository.updateBudgetById(id, req.budget());`<br><br>`@Query("update Department d set d.budget = :newBudget`<br>&nbsp;&nbsp;`where d.id = :id")` |
-| **B2** | *(nu există)* | `@RestControllerAdvice`<br>`class GlobalExceptionHandler {`<br>&nbsp;&nbsp;`@ExceptionHandler(DepartmentIdNotFound.class)`<br>&nbsp;&nbsp;`@ResponseStatus(HttpStatus.NOT_FOUND)`<br>&nbsp;&nbsp;`ApiError handle(DepartmentIdNotFound e) { ... }`<br>`}`<br>+ handlere pentru `MethodArgumentNotValidException` (400), `ConstraintViolationException` (400), `DataIntegrityViolationException` (409) |
-| **B3** | `findById(id).orElseThrow();` | `findById(id).orElseThrow(DepartmentIdNotFound::new);` |
-| **B4** | `@OneToMany(`<br>&nbsp;&nbsp;`mappedBy = "department",`<br>&nbsp;&nbsp;`cascade = CascadeType.ALL,`<br>&nbsp;&nbsp;`orphanRemoval = true,`<br>&nbsp;&nbsp;`fetch = FetchType.LAZY)` | `@OneToMany(`<br>&nbsp;&nbsp;`mappedBy = "department",`<br>&nbsp;&nbsp;`cascade = {CascadeType.PERSIST, CascadeType.MERGE},`<br>&nbsp;&nbsp;`fetch = FetchType.LAZY)`<br><br>*(și în `deleteDepartment`, dezlegi angajații înainte de `delete`)* |
-| **B5** | *(niciun endpoint de creare)* | `@PostMapping("/{departmentId}/employees")`<br>`@ResponseStatus(HttpStatus.CREATED)`<br>`EmployeeResponse addEmployee(`<br>&nbsp;&nbsp;`@PathVariable Long departmentId,`<br>&nbsp;&nbsp;`@Valid @RequestBody EmployeeCreateRequest request)` |
-| **B6** | `if(employeeRepository.findAll().isEmpty()) {`<br>&nbsp;&nbsp;`throw new NoEmployeesFound();`<br>`}`<br>`return employeeRepository.findAll()`<br>&nbsp;&nbsp;`.stream().map(EmployeeResponse::from).toList();` | `return employeeRepository.findAll()`<br>&nbsp;&nbsp;`.stream().map(EmployeeResponse::from).toList();` |
+| **B1** | `@NotBlank(...)`<br>`@PositiveOrZero(...)`<br>`Double budget` | `@NotNull(message = "Department budget required")`<br>`@PositiveOrZero(...)`<br>`Double budget` |
+| **B2** | `return new ChangeSalaryResponse(`<br>&nbsp;&nbsp;`employee.getId(),`<br>&nbsp;&nbsp;`employee.getSalary(),`<br>&nbsp;&nbsp;`updatedRows);` | `return new ChangeSalaryResponse(`<br>&nbsp;&nbsp;`employee.getId(),`<br>&nbsp;&nbsp;`request.salary(),`<br>&nbsp;&nbsp;`updatedRows);` |
+| **B3** | `@PatchMapping("/{id}/{newSalary}")`<br>`... changeSalaryThruUrl(`<br>&nbsp;&nbsp;`@PathVariable Long employeeId,`<br>&nbsp;&nbsp;`@PathVariable BigDecimal newSalary)` | *(șterge endpoint-ul; `PATCH /{id}/salary` îl acoperă cu validare)* |
+| **B4** | `if(... && !employeeRepository.existsByEmail(request.email())){`<br>&nbsp;&nbsp;`employee.setEmail(request.email());`<br>`}` | `employeeRepository.findByEmail(request.email())`<br>&nbsp;&nbsp;`.filter(other -> !other.getId().equals(id))`<br>&nbsp;&nbsp;`.ifPresent(o -> { throw new EmailAlreadyUsed(); });`<br>`employee.setEmail(request.email());` |
+| **B5** | *(nu există)* | `@RestControllerAdvice` cu `@ExceptionHandler` pentru: excepțiile „nu găsesc" → 404, `MethodArgumentNotValidException` → 400, `ConstraintViolationException` → 400, `DataIntegrityViolationException` / `EmailAlreadyUsed` → 409 |
+| **B6** | `findById(id).orElseThrow();`<br>*(4 locuri)* | `findById(id).orElseThrow(EmployeeIdNotFound::new);`<br>`findById(id).orElseThrow(DepartmentIdNotFound::new);` |
 
 ---
 
 ## Ordinea de atac
 
-1. **B1** — e singurul care strică date deja salvate. `where d.id = :id`, două minute.
-2. **B6** — șterge `if/throw` și dubla chemare, apoi rulează cele două `grep`-uri de mai sus pe tot proiectul.
-3. **B2** — advice-ul global. După el, B3 devine vizibil ca 404, nu ca 500.
-4. **B3** — `orElseThrow(DepartmentIdNotFound::new)` în ambele locuri, plus M3 în același timp.
-5. **B5** — endpoint-ul de creare angajat; abia atunci API-ul e complet.
-6. **B4** — decizia despre cascade; discut-o cu mine dacă nu ești sigur ce vrei să însemne „șterg un departament".
-7. Apoi 🟡-urile, în ordinea din listă.
+1. **B1** — un endpoint întreg e mort. `@NotNull` în loc de `@NotBlank`, zece secunde.
+2. **B3** — șterge endpoint-ul cu salariul în URL; e singurul prin care intră date invalide în baza de date.
+3. **B6** — rulează `grep -rn "orElseThrow()" src/main/java` și repară toate cele patru dintr-o dată.
+4. **B5** — advice-ul global. După el, B6 devine vizibil ca 404, iar B4 poate returna 409.
+5. **B4** — refuz explicit în loc de tăcere.
+6. **B2** — răspunsul corect la patch-ul de salariu.
+7. **B7** — decizia despre cascade; scrie-mi ce vrei să însemne „șterg un departament" și o discutăm.
+8. Apoi 🟡-urile.
 
 ---
 
 ## Q&A — verifică-ți înțelegerea
 
-1. La `PATCH /api/department/4/budget` răspunsul a fost `"updatedRow": 2`. Ai fi putut prinde bug-ul B1 **fără** să te uit în cod, doar citind răspunsul acela. Ce anume din el e imposibil pentru un `PATCH` corect pe o singură resursă, și de ce?
+1. `mvn compile` trece verde, dar `PUT /api/department/1` dă 500 la orice cerere, din cauza unei adnotări. De ce nu poate compilatorul să prindă `@NotBlank` pus pe un `Double`, și în ce moment exact al unei cereri se descoperă problema?
 
-2. Ai pus `clearAutomatically = true` pe `@Modifying` — bine. Descrie ce s-ar fi întâmplat fără el, concret: după `updateBudgetByName`, în aceeași tranzacție, ce ar fi returnat `department.getBudget()` și de ce Hibernate n-are cum să afle singur că valoarea din memorie s-a învechit?
+2. Entitatea `Employee` are `@Positive` pe `salary`, și totuși `PATCH /api/employees/1/-5000` a scris −5000 în baza de date. Explică de ce adnotarea nu s-a activat — ce anume din felul în care funcționează un `update` JPQL de tip bulk o ocolește?
 
-3. `GET /api/employees` pe o bază fără angajați dă 500. Ai reparat exact aceeași greșeală în `DepartmentQueryServiceImpl` **în aceeași rundă**. Ce anume din felul în care ai lucrat a făcut ca reparația să nu se transfere, și ce verificare de zece secunde ar fi prins-o înainte de commit?
+3. `PUT` cu un email deja folosit a răspuns `200 OK` și n-a schimbat nimic. Din perspectiva cuiva care consumă API-ul tău dintr-o aplicație de frontend: ce ar afișa utilizatorului după răspunsul ăsta, și de ce `409` cu un mesaj e mai ușor de folosit decât `200` cu date nemodificate?
+
+---
+
+**Următorul pas:** repară în ordinea de mai sus, rulează cele două `grep`-uri înainte de commit, și scrie-mi „next".
+
+**Alături de review:** `IDEI-ENDPOINTURI.pdf` în rădăcina repo-ului — 12 endpoint-uri noi de implementat, pe trei niveluri, toate pe modelul pe care îl ai deja. Ia-le după ce închizi 🔴-urile de mai sus.
 
 ---
 
-**Următorul pas:** repară în ordinea de mai sus, commit (cu `mvn -DskipTests compile` înainte), și scrie-mi „next".
+## Runda 3 — 2026-09-02 — sha `edebe10`
 
----
+Verificată prin rulare pe H2, 14 probe HTTP. Stare la runda 4:
+
+- B1 🔴 `changeBudget` făcea `update ... where d.name` — PATCH pe un id schimba bugetul altui departament omonim (`"updatedRow": 2`) → ✅ **ÎNCHIS** (`updateBudgetById`, `where d.id = :id`)
+- B2 🔴 fără `@RestControllerAdvice`, 4 excepții → toate 500 → 🔴 **DESCHIS, a 4-a rundă** (acum 5 clase de excepție, zero handlere)
+- B3 🔴 `orElseThrow()` gol → `NoSuchElementException` → 🔴 **ÎNCHIS 3 din 7 locuri** (vezi B6 runda 4)
+- B4 🔴 `DELETE` pe departament șterge și angajații (cascade ALL + orphanRemoval) → 🔴 **DESCHIS** (vezi B7 runda 4)
+- B5 🔴 nu se putea crea un angajat prin API → ✅ **ÎNCHIS** (`POST /api/employees/{departmentid}`; vezi M1 runda 4 pentru forma path-ului)
+- B6 🔴 `EmployeeQueryServiceImpl` reproducea `isEmpty()+throw` și dubla `findAll()` reparate în aceeași rundă la departamente → 🔴 **DESCHIS** (`GET /api/employees` pe listă goală dă tot 500)
+- 🟡 M1 adnotări de web în interfața de serviciu → deschis · M2 `PUT` cu semantică de `PATCH` → ✅ închis, dar cu `@NotBlank` pe `Double` (B1 runda 4) · M3 `existsById`+`findById` → deschis · M4 trei excepții pentru aceeași idee → deschis, acum șase · M5 `@Transactional` jakarta fără `readOnly` → deschis · M6 POST 200 în loc de 201 → deschis · M7 postman pe `/api/company` → ✅ **ÎNCHIS** · M8 `/api/department` singular → deschis · M9 `updatedRow` expus → deschis · M10 nume departament neunic → deschis · M11 `mvnw` fără bit exec → deschis
+- ⭐ `@Modifying(clearAutomatically = true, flushAutomatically = true)` pus **singur**, fără să i se ceară — vezi B2 runda 4 pentru fața cealaltă a monedei.
 
 ## Runda 2 — 2026-09-02 — sha `e8f05ad`
 
