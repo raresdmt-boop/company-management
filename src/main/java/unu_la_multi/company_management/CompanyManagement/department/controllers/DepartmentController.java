@@ -9,6 +9,7 @@ import unu_la_multi.company_management.CompanyManagement.department.services.int
 import unu_la_multi.company_management.CompanyManagement.department.services.interfaces.DepartmentQueryService;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/department")
@@ -52,4 +53,17 @@ public class DepartmentController {
         return ResponseEntity.ok(departmentCommandService.deleteDepartment(id));
     }
 
+    @GetMapping("/count-employees-per-department")
+    public ResponseEntity<Map<String, Object>> getCountEmployeesPerDepartment(@RequestParam Long departmentId) {
+        return ResponseEntity.ok(Map.of(
+                "department", departmentQueryService.getDepartmentById(departmentId).name(),
+                "emmployee count", departmentQueryService.countEmployeesByDepartmentId(departmentId)));
+    }
+
+    @GetMapping("/employee-count")
+    public ResponseEntity<List<DepartmentEmployeeCount>> getAllEmployeeCount(){
+        return ResponseEntity.ok(departmentQueryService.getAllEmployeeCounts());
+    }
+
+    
 }

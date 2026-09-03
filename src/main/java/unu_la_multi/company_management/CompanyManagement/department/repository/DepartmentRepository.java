@@ -1,5 +1,6 @@
 package unu_la_multi.company_management.CompanyManagement.department.repository;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -19,5 +20,14 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update Department d set d.budget = :newBudget where d.id = :id")
     int updateBudgetById(@Param("id") Long id, @Param("newBudget") Double newBudget);
+
+    @Query("""
+            select count(e.id)
+            from Department d left join  d.employees e
+            where d.id = :id
+            """)
+    long countEmployeesByDepartmentId(@Param("id") Long id);
+
+
 
 }

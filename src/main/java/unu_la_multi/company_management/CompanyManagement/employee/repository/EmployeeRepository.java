@@ -15,4 +15,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update Employee e set e.salary = :newSalary where e.email = :email")
     int updateSalaryByEmail(@Param("email") String email, @Param("newSalary") BigDecimal salary);
+
 }
+

@@ -13,6 +13,10 @@ import java.util.List;
 
 @Entity(name = "Department")
 @Table(name = "department")
+@NamedEntityGraph(
+        name = "Department.withEmployees",
+        attributeNodes = @NamedAttributeNode("employees")
+)
 public class Department {
 
     @Id
