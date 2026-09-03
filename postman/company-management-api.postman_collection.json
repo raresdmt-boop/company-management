@@ -115,7 +115,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://127.0.0.1:8099/api/company",
+              "raw": "http://127.0.0.1:8099/api/department",
               "protocol": "http",
               "host": [
                 "127",
@@ -126,7 +126,7 @@
               "port": "8099",
               "path": [
                 "api",
-                "company"
+                "department"
               ]
             }
           },
@@ -179,6 +179,155 @@
               "path": [
                 "api",
                 "employees"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST create employee with dep ID",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"firstName\": \"Bbbb\",\r\n    \"lastName\": \"GGG\",\r\n    \"email\": \"gugugu@gmail.gu\",\r\n    \"salary\": 18600.0,\r\n    \"jobTitle\": \"gagaga\",\r\n    \"accessCode\": \"gagaga\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8099/api/employees/1",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8099",
+              "path": [
+                "api",
+                "employees",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PUT update employee",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"firstName\": \"Catalin\",\r\n    \"lastName\": \"Striblea\",\r\n    \"email\": \"catalin@striblea.ro\",\r\n    \"salary\": 200000,\r\n    \"jobTitle\": \"Java Dev\",\r\n    \"accessCode\": \"1A2B3C\" \r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8099/api/employees/8",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8099",
+              "path": [
+                "api",
+                "employees",
+                "8"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH change salary",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"salary\": 1\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://127.0.0.1:8099/api/employees/8/salary",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8099",
+              "path": [
+                "api",
+                "employees",
+                "8",
+                "salary"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH change salary through URL",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8099/api/employees/8/2.0",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8099",
+              "path": [
+                "api",
+                "employees",
+                "8",
+                "2.0"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE employee by id",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://127.0.0.1:8099/api/employees/8",
+              "protocol": "http",
+              "host": [
+                "127",
+                "0",
+                "0",
+                "1"
+              ],
+              "port": "8099",
+              "path": [
+                "api",
+                "employees",
+                "8"
               ]
             }
           },

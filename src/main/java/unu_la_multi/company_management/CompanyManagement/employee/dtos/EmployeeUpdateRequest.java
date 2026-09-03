@@ -1,11 +1,10 @@
 package unu_la_multi.company_management.CompanyManagement.employee.dtos;
 
 import jakarta.validation.constraints.*;
-import unu_la_multi.company_management.CompanyManagement.employee.models.Employee;
 
 import java.math.BigDecimal;
 
-public record EmployeeCreateRequest(
+public record EmployeeUpdateRequest(
 
         @NotBlank(message = "Employee first name required")
         @Size(message = "Name must be maximum 50 characters long", max = 50)
@@ -21,9 +20,10 @@ public record EmployeeCreateRequest(
         String email,
 
         @NotNull(message = "Salary cannot be null")
-        @Positive(message = "Salary must be positive")
+        @Positive(message = "Salary must be pozitive")
         BigDecimal salary,
 
+        @NotNull(message = "Job title cannot be null when updating")
         @Size(min = 2, max = 20)
         String jobTitle,
 
@@ -31,5 +31,4 @@ public record EmployeeCreateRequest(
         @Size(message ="Access code must be exactly 6 characters", min = 6, max = 6)
         String accessCode
 ) {
-
 }

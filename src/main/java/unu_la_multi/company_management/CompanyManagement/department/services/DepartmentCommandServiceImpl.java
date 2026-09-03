@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 import unu_la_multi.company_management.CompanyManagement.department.dtos.*;
 import unu_la_multi.company_management.CompanyManagement.department.exceptions.DepartmentIdNotFound;
+import unu_la_multi.company_management.CompanyManagement.department.exceptions.DepartmentNotFound;
 import unu_la_multi.company_management.CompanyManagement.department.models.Department;
 import unu_la_multi.company_management.CompanyManagement.department.repository.DepartmentRepository;
 import unu_la_multi.company_management.CompanyManagement.department.services.interfaces.DepartmentCommandService;
@@ -73,7 +74,7 @@ public class DepartmentCommandServiceImpl implements DepartmentCommandService {
     public ChangeBudgetResponse changeBudget(Long id, ChangeBudgetRequest changeBudgetRequest) {
         Department  department = departmentRepository.findById(id).orElseThrow();
 
-        int updatedRows = departmentRepository.updateBudgetByName(department.getName(), changeBudgetRequest.budget());
+        int updatedRows = departmentRepository.updateBudgetById(department.getId(), changeBudgetRequest.budget());
         return new ChangeBudgetResponse(
                 department.getId(),
                 department.getName(),

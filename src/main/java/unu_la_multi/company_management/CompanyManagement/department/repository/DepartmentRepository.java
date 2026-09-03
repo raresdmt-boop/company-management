@@ -17,7 +17,7 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
     List<Department> getDepartmentsWithEmployees();
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("update Department d set d.budget = :newBudget where d.name = :name")
-    int updateBudgetByName(@Param("name") String name, @Param("newBudget") Double newBudget);
+    @Query("update Department d set d.budget = :newBudget where d.id = :id")
+    int updateBudgetById(@Param("id") Long id, @Param("newBudget") Double newBudget);
 
 }
