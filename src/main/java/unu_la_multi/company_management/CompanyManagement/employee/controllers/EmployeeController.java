@@ -51,14 +51,6 @@ public class EmployeeController {
         return ResponseEntity.ok(employeeCommandService.changeSalary(employeeId, request));
     }
 
-    @PatchMapping("/{id}/{newSalary}")
-    public ResponseEntity<ChangeSalaryResponse> changeSalaryThruUrl(
-            @PathVariable("id") Long employeeId,
-            @PathVariable("newSalary") BigDecimal newSalary
-    ){
-        return ResponseEntity.ok(employeeCommandService.changeSalaryThruUrl(employeeId, newSalary));
-    }
-
     @DeleteMapping("/{id}")
     public ResponseEntity<EmployeeDeleteResponse> deleteEmployee(
             @PathVariable("id") Long employeeId

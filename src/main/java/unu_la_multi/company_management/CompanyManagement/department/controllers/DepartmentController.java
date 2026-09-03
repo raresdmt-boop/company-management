@@ -65,5 +65,5 @@ public class DepartmentController {
         return ResponseEntity.ok(departmentQueryService.getAllEmployeeCounts());
     }
 
-    
+
 }

@@ -31,7 +31,7 @@ public class EmployeeCommandServiceImpl implements EmployeeCommandService {
     @Override
     public EmployeeResponse createEmployeeWithDepartment(EmployeeCreateRequest request, Long departmentId) {
 
-        Department department = departmentRepository.findById(departmentId).orElseThrow();
+        Department department = departmentRepository.findById(departmentId).orElseThrow(DepartmentIdNotFound::new);
 
         Employee employee = new Employee(
                 request.firstName(),
@@ -57,7 +57,7 @@ public class EmployeeCommandServiceImpl implements EmployeeCommandService {
     @Override
     public EmployeeUpdateResponse updateEmployee(Long id, EmployeeUpdateRequest request){
 
-        Employee employee = employeeRepository.findById(id).orElseThrow();
+        Employee employee = employeeRepository.findById(id).orElseThrow(EmployeeIdNotFound::new);
 
         if(request.firstName()!=null && !request.firstName().isBlank()){
             employee.setFirstName(request.firstName());
@@ -65,6 +65,7 @@ public class EmployeeCommandServiceImpl implements EmployeeCommandService {
         if(request.lastName()!=null && !request.lastName().isBlank()){
             employee.setLastName(request.lastName());
         }
+
         if(request.email()!=null && !request.email().isBlank() && !employeeRepository.existsByEmail(request.email())){
             employee.setEmail(request.email());
         }
@@ -99,7 +100,7 @@ public class EmployeeCommandServiceImpl implements EmployeeCommandService {
 
         return new ChangeSalaryResponse(
                 employee.getId(),
-                employee.getSalary(),
+                request.salary(),
                 updatedRows
         );
     }
@@ -112,7 +113,7 @@ public class EmployeeCommandServiceImpl implements EmployeeCommandService {
 
         return new ChangeSalaryResponse(
                 employee.getId(),
-                employee.getSalary(),
+                newSalary,
                 updatedRows
         );
     }

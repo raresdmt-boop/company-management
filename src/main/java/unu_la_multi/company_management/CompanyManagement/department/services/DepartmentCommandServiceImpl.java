@@ -47,10 +47,8 @@ public class DepartmentCommandServiceImpl implements DepartmentCommandService {
 
     @Override
     public DepartmentUpdateResponse updateDepartment(Long id, DepartmentUpdateRequest request) {
-        if(!departmentRepository.existsById(id)) {
-            throw new DepartmentIdNotFound();
-        }
-        Department department = departmentRepository.findById(id).orElseThrow();
+
+        Department department = departmentRepository.findById(id).orElseThrow(DepartmentIdNotFound::new);
 
         if(request.name() != null && !request.name().isEmpty()) {
             department.setName(request.name());
@@ -72,7 +70,7 @@ public class DepartmentCommandServiceImpl implements DepartmentCommandService {
 
     @Override
     public ChangeBudgetResponse changeBudget(Long id, ChangeBudgetRequest changeBudgetRequest) {
-        Department  department = departmentRepository.findById(id).orElseThrow();
+        Department  department = departmentRepository.findById(id).orElseThrow(DepartmentIdNotFound::new);
 
         int updatedRows = departmentRepository.updateBudgetById(department.getId(), changeBudgetRequest.budget());
         return new ChangeBudgetResponse(
@@ -84,7 +82,7 @@ public class DepartmentCommandServiceImpl implements DepartmentCommandService {
 
     @Override
     public DepartmentDeleteResponse deleteDepartment(Long id) {
-        Department department = departmentRepository.findById(id).orElseThrow();
+        Department department = departmentRepository.findById(id).orElseThrow(DepartmentIdNotFound::new);
 
         departmentRepository.delete(department);
 
