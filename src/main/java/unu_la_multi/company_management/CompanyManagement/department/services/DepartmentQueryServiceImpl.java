@@ -58,12 +58,7 @@ public class DepartmentQueryServiceImpl implements DepartmentQueryService {
 
     @Override
     public List<DepartmentEmployeeCount> getAllEmployeeCounts() {
-        List<Department>  departments = departmentRepository.findAll();
-        List<DepartmentEmployeeCount> counts = new ArrayList<>();
-        for(Department d : departments){
-            counts.add(getEmployeeCount(d.getId()));
-        }
-        return counts;
+        return departmentRepository.countEmployeesPerDepartment();
     }
 
     @Override
@@ -80,6 +75,8 @@ public class DepartmentQueryServiceImpl implements DepartmentQueryService {
                         .toList()
         );
     }
+
+
 
 
 }

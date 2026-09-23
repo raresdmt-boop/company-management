@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import unu_la_multi.company_management.CompanyManagement.department.dtos.DepartmentEmployeeCount;
 import unu_la_multi.company_management.CompanyManagement.department.models.Department;
 
 import java.util.List;
@@ -30,5 +31,14 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
 
     @EntityGraph(attributePaths = "employees")
     Department getDepartmentById(Long id);
+
+    @Query("""
+        select d.name as name, count(e.id) as employeeCount
+        from Department d
+        left join d.employees e
+        group by d.id, d.name
+        order by d.name
+        """)
+    List<DepartmentEmployeeCount> countEmployeesPerDepartment();
 
 }

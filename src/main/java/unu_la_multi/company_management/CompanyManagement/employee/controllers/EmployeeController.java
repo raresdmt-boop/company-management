@@ -1,6 +1,9 @@
 package unu_la_multi.company_management.CompanyManagement.employee.controllers;
 
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -8,6 +11,7 @@ import unu_la_multi.company_management.CompanyManagement.employee.dtos.*;
 import unu_la_multi.company_management.CompanyManagement.employee.services.interfaces.EmployeeCommandService;
 import unu_la_multi.company_management.CompanyManagement.employee.services.interfaces.EmployeeQueryService;
 
+import javax.print.attribute.standard.PageRanges;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -61,6 +65,20 @@ public class EmployeeController {
     @GetMapping("/{id}")
     public ResponseEntity<EmployeeResponse> getEmployee(@PathVariable("id") Long employeeId) {
         return ResponseEntity.ok(employeeQueryService.getEmployee(employeeId));
+    }
+
+    @GetMapping(params = "jobTitle")
+    public ResponseEntity<List<EmployeeResponse>> getByJobTitle(
+            @RequestParam(required = false) String jobTitle
+    ) {
+        return ResponseEntity.ok(employeeQueryService.getEmployeesByJobTitle(jobTitle));
+    }
+
+    @GetMapping("/pageable")
+    public ResponseEntity<PageResponse<EmployeeResponse>> getEmployeePageable(
+        @PageableDefault(size = 2, sort = "salary", direction = Sort.Direction.ASC) Pageable pagebale
+    ) {
+      return ResponseEntity.ok(employeeQueryService.getAllPageable(pagebale));
     }
 
 }

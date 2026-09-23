@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import unu_la_multi.company_management.CompanyManagement.employee.models.Employee;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
@@ -15,6 +16,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update Employee e set e.salary = :newSalary where e.email = :email")
     int updateSalaryByEmail(@Param("email") String email, @Param("newSalary") BigDecimal salary);
+    List<Employee> findByJobTitle(String jobTitle);
 
 }
 
